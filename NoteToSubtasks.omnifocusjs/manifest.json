@@ -16,6 +16,10 @@
     {
       "identifier": "preferences",
       "image": "doc.badge.gearshape.fill"
+    },
+    {
+      "identifier": "toggleSubtasks",
+      "image": "list.bullet.indent"
     }
   ],
   "libraries": [

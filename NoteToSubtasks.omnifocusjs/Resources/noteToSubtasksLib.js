@@ -4,6 +4,8 @@
 
   const SEPARATOR = '==== Note To Subtasks ===='
   const SEPARATOR_REGEX = new RegExp(`^${SEPARATOR}`, 'm')
+  const ENDING_CHECKMARK = ' ✔';
+  const ENDING_CHECKMARK_REGEX = new RegExp(`${ENDING_CHECKMARK}$`);
 
   lib.loadSyncedPrefs = () => {
     const syncedPrefsPlugin = PlugIn.find('com.KaitlinSalzke.SyncedPrefLibrary')
@@ -72,6 +74,9 @@
     const [note, subtasksData] = task.note.split(SEPARATOR_REGEX)
     task.note = note
 
+    // Remove checkmark from the name
+    if (ENDING_CHECKMARK_REGEX.test(task.name)) task.name = task.name.replace(ENDING_CHECKMARK_REGEX, '')
+
 
 
     // function to add checklist tag and remove uninherited tags
@@ -118,6 +123,17 @@
       return replacement
     })
 
+    // Escape nested separators
+    // taskpaper = taskpaper.replace(NESTED_SEPARATOR_REGEX, '')
+    // Remove nested checklists
+    const nestedChecklistRegex = new RegExp(`(\[ \].*)${ENDING_CHECKMARK}((.*\n)*?)^\t+${SEPARATOR}`, 'm')
+    // const nestedChecklistRegex = new RegExp('(\[ \].*) ✔((.*\n)*?)\t+==== Note To Subtasks ====', 'm')
+    console.log(nestedChecklistRegex.test(taskpaper))
+    console.log(taskpaper)
+    while (nestedChecklistRegex.test(taskpaper)) {
+      taskpaper = taskpaper.replace(nestedChecklistRegex, '$1$2')
+    }
+
     // replace '[ ]' with '-'
     taskpaper = taskpaper.replace(/\[\s\]/g, ' - ')
 
@@ -126,6 +142,7 @@
 
     // replace '< >' with '( )'
     taskpaper = taskpaper.replace(/<\s>/g, '( )')
+    
 
     // create subtasks
     const subtaskPasteboard = Pasteboard.makeUnique()
@@ -150,13 +167,15 @@
 
     const tempPasteboard = Pasteboard.makeUnique()
     copyTasksToPasteboard(task.children, tempPasteboard)
+    const subtasksData = tempPasteboard.string.replace(/^(\t*)- /gm, '$1[ ] ')
 
     task.note = 
     `
 ${task.note}
 ${SEPARATOR}
-${tempPasteboard.string}
+${subtasksData}
     `
+    if (!ENDING_CHECKMARK_REGEX.test(task.name)) task.name = task.name + ENDING_CHECKMARK;
 
     if (lib.getExpandableTag() !== null) task.addTag(lib.getExpandableTag())
 
