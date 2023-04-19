@@ -2,6 +2,9 @@
 (() => {
   const lib = new PlugIn.Library(new Version('1.0'))
 
+  const SEPARATOR = '==== Note To Subtasks ===='
+  const SEPARATOR_REGEX = new RegExp(`^${SEPARATOR}`, 'm')
+
   lib.loadSyncedPrefs = () => {
     const syncedPrefsPlugin = PlugIn.find('com.KaitlinSalzke.SyncedPrefLibrary')
 
@@ -52,10 +55,24 @@
     }
   }
 
+  lib.canBeExpanded = function (task) {
+    return SEPARATOR_REGEX.test(task.note) && task.children.length === 0
+  }
+  lib.canBeCollapsed = function (task) {
+    return !SEPARATOR_REGEX.test(task.note) && task.children.length !== 0
+  }
+
   lib.noteToSubtasks = function (task) {
+    if (!lib.canBeExpanded(task)) return;
     const checklistTag = lib.getChecklistTag()
     const uninheritedTags = lib.getUninheritedTags()
     const tagsToRemove = lib.getTagsToRemove()
+
+    // Extract the data & remove from the note
+    const [note, subtasksData] = task.note.split(SEPARATOR_REGEX)
+    task.note = note
+
+
 
     // function to add checklist tag and remove uninherited tags
     const tagSubtasks = (task) => task.flattenedTasks.forEach(subtask => {
@@ -76,8 +93,9 @@
     // mark parent task as completed when all children are completed
     task.completedByChildren = true
 
+
     // create from template if applicable
-    const templateNameMatch = task.note.match(/\$TEMPLATE=(.*?)$/)
+    const templateNameMatch = subtasksData.match(/\$TEMPLATE=(.*?)$/)
     if (templateNameMatch !== null) {
       lib.templateToSubtasks(task, templateNameMatch[1])
       tagSubtasks(task)
@@ -86,12 +104,12 @@
 
     // stop if no TaskPaper and no template found
     const regex = /^.*?(?=_*\[\s\]|_*-\s)/gs
-    if (!regex.test(task.note)) {
+    if (!regex.test(subtasksData)) {
       return
     }
 
     // ignore everything up to first '[ ]' or '- ' or '_'' in TaskPaper
-    let taskpaper = task.note.replace(regex, '')
+    let taskpaper = subtasksData.replace(regex, '')
 
     // get note and replace underscores before "[" with tabs -- needed because Shortcut removes tabs from Drafts template
     taskpaper = taskpaper.replace(/(_)+(?=\[)/g, function (match) {
@@ -132,7 +150,13 @@
 
     const tempPasteboard = Pasteboard.makeUnique()
     copyTasksToPasteboard(task.children, tempPasteboard)
-    task.note = tempPasteboard.string
+
+    task.note = 
+    `
+${task.note}
+${SEPARATOR}
+${tempPasteboard.string}
+    `
 
     if (lib.getExpandableTag() !== null) task.addTag(lib.getExpandableTag())
 
