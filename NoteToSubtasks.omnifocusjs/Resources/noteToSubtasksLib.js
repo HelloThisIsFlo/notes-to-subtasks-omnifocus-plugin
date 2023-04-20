@@ -6,6 +6,7 @@
   const SEPARATOR_REGEX = new RegExp(`^${SEPARATOR}`, 'm')
   const ENDING_CHECKMARK = ' ✔';
   const ENDING_CHECKMARK_REGEX = new RegExp(`${ENDING_CHECKMARK}$`);
+  const REPEATING_COLLAPSE_WARNING = '\n[ ] ⚠️ REPEATING TASK - Collapse before completing! ⚠️'
 
   lib.loadSyncedPrefs = () => {
     const syncedPrefsPlugin = PlugIn.find('com.KaitlinSalzke.SyncedPrefLibrary')
@@ -58,7 +59,10 @@
   }
 
   lib.canBeExpanded = function (task) {
-    return SEPARATOR_REGEX.test(task.note) && task.children.length === 0
+    return SEPARATOR_REGEX.test(task.note) 
+      && task.children.length === 0 
+      && task.taskStatus !== Task.Status.Completed
+      && task.taskStatus !== Task.Status.Dropped
   }
   lib.canBeCollapsed = function (task) {
     return !SEPARATOR_REGEX.test(task.note) && task.children.length !== 0
@@ -85,15 +89,6 @@
       subtask.addTags(task.tags)
       subtask.removeTags(uninheritedTags)
     })
-
-    // if task is a repeating task, duplicate and drop before expanding the new task
-    if (task.repetitionRule !== null) {
-      const nTask = duplicateTasks([task], task.before)[0]
-      nTask.repetitionRule = null
-      task.removeTags(tagsToRemove)
-      task.drop(false)
-      task = nTask
-    }
     
     // mark parent task as completed when all children are completed
     task.completedByChildren = true
@@ -123,15 +118,15 @@
       return replacement
     })
 
-    // Escape nested separators
-    // taskpaper = taskpaper.replace(NESTED_SEPARATOR_REGEX, '')
     // Remove nested checklists
     const nestedChecklistRegex = new RegExp(`(\[ \].*)${ENDING_CHECKMARK}((.*\n)*?)^\t+${SEPARATOR}`, 'm')
-    // const nestedChecklistRegex = new RegExp('(\[ \].*) ✔((.*\n)*?)\t+==== Note To Subtasks ====', 'm')
-    console.log(nestedChecklistRegex.test(taskpaper))
-    console.log(taskpaper)
     while (nestedChecklistRegex.test(taskpaper)) {
       taskpaper = taskpaper.replace(nestedChecklistRegex, '$1$2')
+    }
+
+    // if task is a repeating task, add extra task to instruct to collapse before completing
+    if (task.repetitionRule !== null) {
+      taskpaper += REPEATING_COLLAPSE_WARNING
     }
 
     // replace '[ ]' with '-'
@@ -142,7 +137,7 @@
 
     // replace '< >' with '( )'
     taskpaper = taskpaper.replace(/<\s>/g, '( )')
-    
+
 
     // create subtasks
     const subtaskPasteboard = Pasteboard.makeUnique()
@@ -167,7 +162,9 @@
 
     const tempPasteboard = Pasteboard.makeUnique()
     copyTasksToPasteboard(task.children, tempPasteboard)
-    const subtasksData = tempPasteboard.string.replace(/^(\t*)- /gm, '$1[ ] ')
+    const subtasksData = tempPasteboard.string
+                          .replace(/^(\t*)- /gm, '$1[ ] ')
+                          .replace(REPEATING_COLLAPSE_WARNING, '')
 
     task.note = 
     `
