@@ -1,3 +1,43 @@
+
+# Changes from the original repo
+
+*  **Added support for note in the main task**
+    *  The note will be preserved when expanding, and when collapsing
+       the taskpaper section will be separated by a heading
+
+*  **Gracefully handle nesting**
+    *  When folding a checklist that already contains a folded
+       checklist, it would merge the 2, taking care of removing the
+       headers, and make it a single checklist
+
+*  **Tweaked handling of repeating tasks**
+    *  Repeating tasks can now be expanded and collapsed at will
+       (removed the instance duplication + dropping)
+    *  When expanding a repeating task, an extra task is added as a
+       warning to let the user know they shouldn't complete the
+       checklist before collapsing it (otherwise the repeated task will
+       be expanded too)
+    *  To prevent "uncompletion" of tasks, which is particularly for
+       repeating tasks, the plugin prevents triggering the expand
+       action on completed or dropped items
+
+*  **Now only allows triggering when 1 single task is selected**
+    *  Allow collapse if the task has children (and no header)
+    *  Allow expand if the task has no children and has a header (or a
+       template marker)
+
+*  **Added a "ToggleSubtasks" action that toggles between expanded and collapsed (My favorite feature)**
+    *  This, after assigning to a keyboard shortcut, has become my most
+       used feature in OmniFocus =F0=9F=98=81
+
+*  **Added a '✔' on the main checklist item**
+    *  This is to help identify checklist that can be expanded
+
+*  **Added a '⁃' before checklist items when expanded**
+    *  This is to more easily identify checklist items when showing individual tasks in custom perspectives
+
+---
+
 # About
 
 This is an Omni Automation plug-in bundle for OmniFocus that provides a function and action to 'expand' a TaskPaper note into subtasks; it is designed with "checklist" items in mind.
