@@ -141,9 +141,7 @@
 
     // create subtasks
     const subtaskPasteboard = Pasteboard.makeUnique()
-    const subtasks = new Pasteboard.Item()
-    subtasks.setStringForType(taskpaper, TypeIdentifier.taskPaper)
-    subtaskPasteboard.addItems([subtasks])
+    subtaskPasteboard.string = taskpaper
     const newTasks = pasteTasksFromPasteboard(subtaskPasteboard)
     moveTasks(newTasks, task.ending)
 
