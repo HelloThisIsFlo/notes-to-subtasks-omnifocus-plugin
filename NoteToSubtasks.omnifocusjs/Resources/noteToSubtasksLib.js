@@ -97,10 +97,6 @@
     const [note, subtasksData] = task.note.split(SEPARATOR_REGEX)
     task.note = note
 
-    // Remove checkmark from the name
-    if (ENDING_CHECKMARK_REGEX.test(task.name)) task.name = task.name.replace(ENDING_CHECKMARK_REGEX, '')
-
-
 
     // mark parent task as completed when all children are completed
     task.completedByChildren = true
