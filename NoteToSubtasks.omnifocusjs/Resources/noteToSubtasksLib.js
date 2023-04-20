@@ -2,6 +2,7 @@
 (() => {
   const lib = new PlugIn.Library(new Version('1.0'))
 
+  const TEMPLATE_REGEX = /^\$TEMPLATE=(.*?)$/gm
   const SEPARATOR = '==== Note To Subtasks ===='
   const SEPARATOR_REGEX = new RegExp(`^${SEPARATOR}`, 'm')
   const ENDING_CHECKMARK = ' ✔';
@@ -59,7 +60,7 @@
   }
 
   lib.canBeExpanded = function (task) {
-    return SEPARATOR_REGEX.test(task.note) 
+    return (task.note.match(SEPARATOR_REGEX) || [...task.note.matchAll(TEMPLATE_REGEX)]?.length === 1)
       && task.children.length === 0 
       && task.taskStatus !== Task.Status.Completed
       && task.taskStatus !== Task.Status.Dropped
@@ -73,6 +74,24 @@
     const checklistTag = lib.getChecklistTag()
     const uninheritedTags = lib.getUninheritedTags()
     const tagsToRemove = lib.getTagsToRemove()
+    const tagSubtasks = (task) => task.flattenedTasks.forEach(subtask => {
+      // function to add checklist tag and remove uninherited tags
+      if (checklistTag !== null) subtask.addTag(checklistTag)
+      subtask.addTags(task.tags)
+      subtask.removeTags(uninheritedTags)
+    })
+    
+
+    // create from template if applicable
+    const templateNameMatches = [...task.note.matchAll(TEMPLATE_REGEX)]
+    if (templateNameMatches?.length === 1) {
+      const templateName = templateNameMatches[0][1];
+      lib.templateToSubtasks(task, templateName);
+      task.note = task.note.replace(TEMPLATE_REGEX, '')
+      tagSubtasks(task)
+      return
+    }
+
 
     // Extract the data & remove from the note
     const [note, subtasksData] = task.note.split(SEPARATOR_REGEX)
@@ -83,24 +102,9 @@
 
 
 
-    // function to add checklist tag and remove uninherited tags
-    const tagSubtasks = (task) => task.flattenedTasks.forEach(subtask => {
-      if (checklistTag !== null) subtask.addTag(checklistTag)
-      subtask.addTags(task.tags)
-      subtask.removeTags(uninheritedTags)
-    })
-    
     // mark parent task as completed when all children are completed
     task.completedByChildren = true
 
-
-    // create from template if applicable
-    const templateNameMatch = subtasksData.match(/\$TEMPLATE=(.*?)$/)
-    if (templateNameMatch !== null) {
-      lib.templateToSubtasks(task, templateNameMatch[1])
-      tagSubtasks(task)
-      return
-    }
 
     // stop if no TaskPaper and no template found
     const regex = /^.*?(?=_*\[\s\]|_*-\s)/gs
