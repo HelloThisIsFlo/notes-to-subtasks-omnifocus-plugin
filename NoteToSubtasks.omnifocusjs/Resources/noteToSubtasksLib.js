@@ -8,6 +8,8 @@
   const ENDING_CHECKMARK = ' ✔';
   const ENDING_CHECKMARK_REGEX = new RegExp(`${ENDING_CHECKMARK}$`);
   const REPEATING_COLLAPSE_WARNING = '\n[ ] ⚠️ REPEATING TASK - Collapse before completing! ⚠️'
+  const BULLET = '⁃ '
+  const BULLET_REGEX = new RegExp(`${BULLET}`, 'g')
 
   lib.loadSyncedPrefs = () => {
     const syncedPrefsPlugin = PlugIn.find('com.KaitlinSalzke.SyncedPrefLibrary')
@@ -129,8 +131,9 @@
       taskpaper += REPEATING_COLLAPSE_WARNING
     }
 
-    // replace '[ ]' with '-'
-    taskpaper = taskpaper.replace(/\[\s\]/g, ' - ')
+    // replace '[ ]' with '-' & add visual bullet
+    // TODO: This could be improved, there may be some issues if '[ ]' is in the task's title or note
+    taskpaper = taskpaper.replace(/\[\s\]/g, ' -' + BULLET)
 
     // replace '( )' with '[ ]'
     taskpaper = taskpaper.replace(/\(\s\)/g, '[ ]')
@@ -161,7 +164,8 @@
     const tempPasteboard = Pasteboard.makeUnique()
     copyTasksToPasteboard(task.children, tempPasteboard)
     const subtasksData = tempPasteboard.string
-                          .replace(/^(\t*)- /gm, '$1[ ] ')
+                          .replaceAll(BULLET_REGEX, '')
+                          .replace(/^(\t*)- /gm, '$1[ ]')
                           .replace(REPEATING_COLLAPSE_WARNING, '')
 
     task.note = 
